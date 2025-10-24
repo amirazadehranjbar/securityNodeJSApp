@@ -1,0 +1,13 @@
+@import "tailwindcss";
+
+.button{
+    @layer{
+        @apply px-2 py-1 bg-slate-300 text-shadow-slate-800 font-bold font-mono border-2 border-slate-500 rounded-md cursor-pointer shadow-md shadow-blue-800 hover:scale-105 transition-all
+    }
+}
+
+.input{
+    @layer{
+        @apply border p-2 rounded-md outline-0 bg-gray-200 border-violet-400
+    }
+}
