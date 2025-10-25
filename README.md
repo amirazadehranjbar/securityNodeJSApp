@@ -5,7 +5,7 @@
 ![Logo](# 🔐 Secure Node.js Authentication System
 
 
-![Logo](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/th5xamgrr6se0x5ro4g6.png)
+![Logo](https://p7.hiclipart.com/preview/558/166/499/node-js-javascript-react-express-js-linux-foundation-mongodb-icons.jpg)
 
 **A full-stack authentication system with modern security practices**
 
@@ -67,16 +67,6 @@
 - [🔮 Future Enhancements](#-future-enhancements)
 - [🤝 Contributing](#-contributing)
 
-## 🌟 Features
-
-- ✅ **User Registration & Login**
-- ✅ **JWT-based Authentication**
-- ✅ **CSRF Protection**
-- ✅ **Password Hashing with bcrypt**
-- ✅ **Redux State Management**
-- ✅ **Responsive React UI**
-- ✅ **Secure Cookie Management**
-- ✅ **Real-time Authentication Status**
 
 ## 🛡️ Security Features
 
