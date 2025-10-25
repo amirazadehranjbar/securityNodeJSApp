@@ -5,6 +5,7 @@
 ![Logo](# 🔐 Secure Node.js Authentication System
 
 
+## logo
 ![Logo](https://p7.hiclipart.com/preview/558/166/499/node-js-javascript-react-express-js-linux-foundation-mongodb-icons.jpg)
 
 **A full-stack authentication system with modern security practices**
@@ -264,6 +265,7 @@ Contributions are welcome! Since this is an ongoing project, feel free to:
 *⭐ Star this repo if you find it helpful! ⭐*
 
 ```
+
 
 
 
