@@ -2,7 +2,52 @@
 # 🔐 Secure Node.js Authentication System
 
 
+![Logo](# 🔐 Secure Node.js Authentication System
+
+
 ![Logo](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/th5xamgrr6se0x5ro4g6.png)
+
+**A full-stack authentication system with modern security practices**
+
+*🚧 This project is currently under active development 🚧*
+
+
+## 📖 Table of Contents
+
+- [🌟 Features](#-features)
+- [🛡️ Security Features](#️-security-features)
+- [🏗️ Project Structure](#️-project-structure)
+- [🚀 Getting Started](#-getting-started)
+- [💻 Usage](#-usage)
+- [🔧 API Endpoints](#-api-endpoints)
+- [🛠️ Tech Stack](#️-tech-stack)
+- [📁 Project Structure Details](#-project-structure-details)
+- [🔮 Future Enhancements](#-future-enhancements)
+- [🤝 Contributing](#-contributing)
+
+## 🌟 Features
+
+- ✅ **User Registration & Login**
+- ✅ **JWT-based Authentication**
+- ✅ **CSRF Protection**
+- ✅ **Password Hashing with bcrypt**
+- ✅ **Redux State Management**
+- ✅ **Responsive React UI**
+- ✅ **Secure Cookie Management**
+- ✅ **Real-time Authentication Status**
+
+## 🛡️ Security Features
+
+| Feature | Implementation | Status |
+|---------|----------------|---------|
+| **CSRF Protection** | Double-Submit Cookie Pattern | ✅ Implemented |
+| **JWT Security** | HttpOnly Cookies + SameSite Strict | ✅ Implemented |
+| **Password Hashing** | bcrypt with salt | ✅ Implemented |
+| **CORS Protection** | Origin-restricted CORS | ✅ Implemented |
+| **Input Validation** | Basic validation | 🔄 In Progress |
+
+## 🏗️ Project Structure
+)
 
 **A full-stack authentication system with modern security practices**
 
@@ -229,6 +274,7 @@ Contributions are welcome! Since this is an ongoing project, feel free to:
 *⭐ Star this repo if you find it helpful! ⭐*
 
 ```
+
 
 
 
