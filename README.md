@@ -2,8 +2,7 @@
 # 🔐 Secure Node.js Authentication System
 
 
-https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white - Runtime environment
-
+![Logo](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/th5xamgrr6se0x5ro4g6.png)
 
 **A full-stack authentication system with modern security practices**
 
@@ -230,6 +229,7 @@ Contributions are welcome! Since this is an ongoing project, feel free to:
 *⭐ Star this repo if you find it helpful! ⭐*
 
 ```
+
 
 
 
