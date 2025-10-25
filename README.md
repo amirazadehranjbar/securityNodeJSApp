@@ -1,7 +1,7 @@
 ```markdown
 # 🔐 Secure Node.js Authentication System
 
-<div align="center">
+
 
 ![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)
 ![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
@@ -12,7 +12,6 @@
 
 *🚧 This project is currently under active development 🚧*
 
-</div>
 
 ## 📖 Table of Contents
 
@@ -228,11 +227,10 @@ Contributions are welcome! Since this is an ongoing project, feel free to:
 
 ---
 
-<div align="center">
 
 **Built with ❤️ using modern web technologies**
 
 *⭐ Star this repo if you find it helpful! ⭐*
 
-</div>
 ```
+
