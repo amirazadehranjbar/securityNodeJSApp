@@ -12,6 +12,8 @@ import cookieParser from 'cookie-parser';
 
 import cors from "cors";
 
+import { csrfInit } from "./middlewares/csrfMiddleware.js";
+
 // middlewars *******************************************
 app.use(express.json());
 app.use(express.urlencoded({extended:true}));
@@ -19,7 +21,9 @@ app.use(cookieParser());
 app.use(cors({
     origin: "http://localhost:5173",
     credentials: true // cookies send permission
-}))
+}));
+// initialize csrf middleware
+app.use(csrfInit());
 
 // routes ***********************************************
 app.use("/",userRoutes);

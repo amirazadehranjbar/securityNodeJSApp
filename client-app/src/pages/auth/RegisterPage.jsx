@@ -2,7 +2,7 @@ import React, {useState} from 'react'
 import {useDispatch} from "react-redux";
 import {registerUser} from "../../redux/features/userReducer.js";
 
-function AuthPage() {
+function RegisterPage() {
 
     const [userData, setUserData] = useState({username: "", password: ""})
     const dispatch = useDispatch();
@@ -34,4 +34,4 @@ function AuthPage() {
     )
 }
 
-export default AuthPage
+export default RegisterPage
