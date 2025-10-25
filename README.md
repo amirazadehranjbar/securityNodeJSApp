@@ -2,11 +2,8 @@
 # 🔐 Secure Node.js Authentication System
 
 
+https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white - Runtime environment
 
-![Node.js](https://p7.hiclipart.com/preview/558/166/499/node-js-javascript-react-express-js-linux-foundation-mongodb-icons.jpg)
-![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
-![MongoDB](https://img.shields.io/badge/MongoDB-4EA94B?style=for-the-badge&logo=mongodb&logoColor=white)
-![JWT](https://img.shields.io/badge/JWT-000000?style=for-the-badge&logo=JSON%20web%20tokens&logoColor=white)
 
 **A full-stack authentication system with modern security practices**
 
@@ -233,6 +230,7 @@ Contributions are welcome! Since this is an ongoing project, feel free to:
 *⭐ Star this repo if you find it helpful! ⭐*
 
 ```
+
 
 
 
