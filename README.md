@@ -1,12 +1,11 @@
 ﻿```markdown
+
 # 🔐 Secure Node.js Authentication System
 
+![Logo](images/security.png)
 
-![Logo](/images/security.png)
-
-
-## logo
-<img alt="nodejsLogo" src="images/nodeLogo.png"/>
+## Logo
+![Node Logo](images/nodeLogo.png)
 
 
 **A full-stack authentication system with modern security practices**
@@ -266,6 +265,7 @@ Contributions are welcome! Since this is an ongoing project, feel free to:
 *⭐ Star this repo if you find it helpful! ⭐*
 
 ```
+
 
 
 
