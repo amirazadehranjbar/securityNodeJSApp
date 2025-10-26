@@ -2,7 +2,7 @@
 
 # 🔐 Secure Node.js Authentication System
 
-![Logo]([./images/security.png](https://github.com/amirazadehranjbar/securityNodeJSApp/blob/main/images/security.png?raw=true))
+![Logo](https://github.com/amirazadehranjbar/securityNodeJSApp/blob/main/images/security.png)
 
 ## Logo
 ![Node Logo](images/nodeLogo.png)
@@ -265,6 +265,7 @@ Contributions are welcome! Since this is an ongoing project, feel free to:
 *⭐ Star this repo if you find it helpful! ⭐*
 
 ```
+
 
 
 
