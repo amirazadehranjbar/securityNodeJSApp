@@ -1,0 +1,916 @@
+//====================================================================================================
+// src/App.jsx
+//====================================================================================================
+
+import React, {useEffect} from 'react'
+import {useNavigate} from "react-router";
+import sendReqForSetCookie from "./api/servers/csrfService.js";
+import {useSelector, useDispatch} from "react-redux";
+import {ChalkActions} from "./chalkActions/chalkActions.js";
+import {logoutUser} from "./redux/features/userReducer.js";
+
+function App() {
+
+    const navigation = useNavigate();
+    const dispatch = useDispatch();
+
+    useEffect(() => {
+        sendReqForSetCookie();
+    }, []);
+
+    const {isAuthenticated, user} = useSelector(state => state.userReducer);
+
+    const handleClick = () => {
+        ChalkActions({message: `isAuthenticated: ${isAuthenticated}`});
+        if (user) {
+            ChalkActions({message: `Current user: ${user.username}`});
+        }
+    }
+
+    const handleLogout = () => {
+        dispatch(logoutUser());
+        ChalkActions({message: "User logged out"});
+    }
+
+    return (
+        <div className="h-screen w-screen bg-indigo-200 flex flex-col items-center">
+
+            <header className="w-screen bg-indigo-400 flex p-3 justify-between">
+
+                <img src="/public/rocket.png" alt="" width="40" className="animate-pulse"/>
+
+                {/* Fixed condition: show logout when authenticated, login/register when NOT authenticated */}
+                {isAuthenticated ? (
+                    <div className="flex space-x-2 items-center">
+                        <span className="text-white font-bold">Welcome, {user?.username}!</span>
+                        <button className="button" onClick={handleLogout}>
+                            logout
+                        </button>
+                    </div>
+                ) : (
+                    <div className="flex space-x-2">
+                        <button className="button" onClick={() => {
+                            navigation("/users/login");
+                        }}>login</button>
+
+                        <button className="button" onClick={() => {
+                            navigation("/users/register");
+                        }}>register</button>
+                    </div>
+                )}
+
+            </header>
+
+            <button className="button w-1/5" onClick={handleClick}>
+                {isAuthenticated ? `Logged in as: ${user?.username}` : 'Not logged in'}
+            </button>
+
+        </div>
+    )
+}
+
+export default App
+
+
+//====================================================================================================
+// src/main.jsx
+//====================================================================================================
+
+import {StrictMode} from 'react'
+import {createRoot} from 'react-dom/client'
+import './index.css'
+import App from './App.jsx'
+import {BrowserRouter, Route, Routes} from "react-router";
+import RegisterPage from "./pages/auth/RegisterPage.jsx";
+import {Provider} from "react-redux";
+import store from "./redux/store.js";
+import LoginPage from "./pages/auth/LoginPage.jsx";
+
+createRoot(document.getElementById('root')).render(
+    <Provider store={store}>
+        <BrowserRouter>
+            <StrictMode>
+                <Routes>
+                    <Route path="/" element={<App/>}/>
+                    <Route path="/users/register" element={<RegisterPage/>}/>
+                    <Route path="/users/login" element={<LoginPage/>}/>
+                </Routes>
+            </StrictMode>
+        </BrowserRouter>
+    </Provider>
+)
+
+
+
+//====================================================================================================
+// src/api/server.js
+//====================================================================================================
+
+import {config} from 'dotenv';
+
+config();
+import express from "express";
+
+const app = express();
+import mongoose from "mongoose"
+import {ChalkActions} from "../chalkActions/chalkActions.js";
+
+import userRoutes from "./routers/userRoutes.js";
+import cookieParser from 'cookie-parser';
+
+import cors from "cors";
+
+import { csrfInit } from "./middlewares/csrfMiddleware.js";
+
+// middlewars *******************************************
+app.use(express.json());
+app.use(express.urlencoded({extended:true}));
+app.use(cookieParser());
+app.use(cors({
+    origin: "http://localhost:5173",
+    credentials: true // cookies send permission
+}));
+// initialize csrf middleware
+app.use(csrfInit());
+
+// routes ***********************************************
+app.use("/",userRoutes);
+// conect to mongoDB ************************************
+mongoose.connect(process.env.MONGODB_URL).then(() => {
+    ChalkActions({message: "connect to mongoDB successfully"})
+}).catch(reason =>
+    ChalkActions({level: "error", message: {reason}})
+)
+
+// set cookies *****************************************
+
+
+
+// srart server *****************************************
+const PORT = process.env.PORT || 8000;
+app.listen(PORT, () => {
+
+    ChalkActions({message: `server start on port : ${PORT}`})
+})
+
+
+//====================================================================================================
+// src/api/middlewares/authMiddleware.js
+//====================================================================================================
+
+// import jwt from "jsonwebtoken";
+// import {ChalkActions} from "../../chalkActions/chalkActions.js";
+//
+// const AuthMiddleware = async (req, res, next)=>{
+//
+//     const token = req.cookies.jwt;
+//
+//     if(!token){
+//         return res.status(401).json("user Unauthorized");
+//     }
+//
+//     try {
+//         const decoded = jwt.verify(token, process.env.JWT_SECRET);
+//         ChalkActions({ message: `JWT verified for userId: ${decoded.userId}` });
+//
+//         req.user = decoded;
+//         next();
+//     } catch (e) {
+//         ChalkActions({ level: "error", message: `Invalid JWT: ${e.message}` });
+//         return res.status(401).json({ message: "Invalid token" });
+//     }
+//
+// };
+//
+// export default AuthMiddleware;
+
+
+//====================================================================================================
+// src/api/middlewares/csrfMiddleware.js
+//====================================================================================================
+
+// src/api/middlewares/csrfMiddleware.js
+import crypto from "crypto";
+
+/*
+  CSRF middleware (double-submit cookie)
+  - generate a random token and set it as a readable cookie if not present
+  - on unsafe methods (POST/PUT/PATCH/DELETE) verify header matches cookie
+*/
+
+const CSRF_COOKIE_NAME = "XSRF-TOKEN";
+const CSRF_HEADER_NAME = "x-xsrf-token"; // client must send this header
+
+// helper: create a secure random token
+function createToken() {
+    return crypto.randomBytes(32).toString("hex"); // 64 hex chars ~ 256 bits
+}
+
+// helper: check if method is state-changing
+function isUnsafeMethod(method) {
+    return ["POST", "PUT", "PATCH", "DELETE"].includes(method.toUpperCase());
+}
+
+export const csrfInit = (options = {}) => {
+    const {
+        cookieName = CSRF_COOKIE_NAME,
+        headerName = CSRF_HEADER_NAME,
+        cookieOptions = {
+            httpOnly: false, // must be readable by JS for double-submit
+            sameSite: "strict",
+            secure: process.env.NODE_ENV === "production",
+            maxAge: 1000 * 60 * 60 * 24, // 1 day
+            path: "/",
+        },
+    } = options;
+
+    return function csrfMiddleware(req, res, next) {
+        try {
+            // 1) Ensure cookie exists: if not, create and set it
+            const existingToken = req.cookies ? req.cookies[cookieName] : undefined;
+
+            if (!existingToken) {
+                const token = createToken();
+                console.log(`[CSRF] setting new token for ${req.ip} token=${token}`);
+                res.cookie(cookieName, token, cookieOptions);
+                // expose token in response header for convenience (optional)
+                res.setHeader("X-CSRF-Token-Generated", "true");
+            } else {
+                // debug log for educational purposes
+                console.log(`[CSRF] token present for ${req.ip} token=${existingToken}`);
+            }
+
+            // 2) If request is unsafe, verify header matches cookie
+            if (isUnsafeMethod(req.method)) {
+                const cookieToken = req.cookies ? req.cookies[cookieName] : undefined;
+                // prefer header, fallback to body._csrf for old forms
+                const headerToken = (req.headers[headerName] || req.body && req.body._csrf) || "";
+
+                console.log(`[CSRF] verifying tokens for ${req.ip} method=${req.method}`);
+                console.log(`[CSRF] cookieToken=${cookieToken}`);
+                console.log(`[CSRF] headerToken=${headerToken}`);
+
+
+                if (!cookieToken || !headerToken || cookieToken !== headerToken) {
+                    console.log(`[CSRF] verification failed for ${req.ip}`);
+                    return res.status(403).json({ message: "Invalid CSRF token" });
+                }
+                console.log(`[CSRF] verification succeeded for ${req.ip}`);
+            }
+
+            next();
+        } catch (err) {
+            console.log("[CSRF] middleware error:", err);
+            return res.status(500).json({ message: "CSRF middleware error" });
+        }
+    };
+};
+
+
+
+//====================================================================================================
+// src/api/models/userModel.js
+//====================================================================================================
+
+import mongoose, {model} from "mongoose";
+
+const userScheme = new mongoose.Schema({
+
+    username:{
+        type:String,
+        required:[true , "user name is requered!"]
+    },
+
+    password:{
+        type:String,
+        required:[true , "password is requred!"]
+    }
+
+});
+
+const userModel = model("Users" , userScheme);
+export default userModel;
+
+
+//====================================================================================================
+// src/api/routers/userRoutes.js
+//====================================================================================================
+
+// src/redux/features/userReducer.js
+//region imports
+import express from "express";
+import UserModel from "../models/userModel.js";
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import {ChalkActions} from "../../chalkActions/chalkActions.js";
+//endregion
+
+const userRoutes = express.Router();
+
+// region register user
+userRoutes.post("/users/register", async (req, res) => {
+
+    try {
+        const {username, password} = req.body;
+
+        // check username and password
+        if (!username || !password) {
+            return res.status(400).json("username and password is required!")
+        }
+
+        // check user exist ************************************************
+        const isExist = await UserModel.findOne({username: username});
+        if (isExist) {
+            return res.status(400).json(`user is exist : ${username}`)
+        }
+
+        // hash password ***************************************************
+        const salt = await bcrypt.genSalt();
+        const hashedPassword = await bcrypt.hash(password, salt);
+
+        // register user ****************************************************
+        const user = await new UserModel({username, password: hashedPassword});
+
+        await user.save();
+
+        // generate token for new user **************************************
+        const token = jwt.sign({userId: user._id}, process.env.JWT_SECRET, {expiresIn: "1h"});
+
+        ChalkActions({message: "token generated"});
+
+        // save generated toke in cookie ************************************
+        res.cookie("jwt", token, {
+            httpOnly: true, // avoid accesses java script to cookie
+            // secure: process.env.NODE_ENV === "production",
+            sameSite: "strict", //  CSRF
+            maxAge: 3600000 // 1 hour for expire token
+        });
+
+        // send response to user *********************************************
+        return res.status(201).json({message: "User registered successfully", username});
+
+    } catch (e) {
+        return res.status(500).json("Internal server error");
+    }
+
+});
+// endregion
+
+
+// region login
+userRoutes.post("/users/login", async (req, res) => {
+    try {
+        const {username, password} = req.body;
+
+
+        if (!username || !password) {
+            return res.status(400).json({message: "Username and password are required"});
+        }
+
+
+        const user = await UserModel.findOne({username});
+        if (!user) {
+            return res.status(401).json({message: "Invalid credentials"});
+        }
+
+
+        const isMatch = await bcrypt.compare(password, user.password);
+
+        if (!isMatch) {
+            return res.status(401).json({message: "Invalid credentials"});
+        }
+
+        const token = jwt.sign({userId: user._id}, process.env.JWT_SECRET, {expiresIn: "1h"});
+
+        ChalkActions({
+            message: `[LOGIN] JWT generated for user: ${username}`
+        });
+
+        res.cookie("jwt", token, {
+            httpOnly: true,
+            sameSite: "strict",
+            maxAge: 3600000 // 1 hour
+        });
+
+
+        ChalkActions({
+            message: `[LOGIN SUCCESS] User logged in: ${username}`
+        });
+
+
+        return res.status(200).json({message: "Login successful", username});
+
+    } catch (e) {
+        console.log(`[LOGIN ERROR] Server error: ${e.message}`);
+        return res.status(500).json({message: "Internal server error"});
+    }
+});
+// endregion
+
+// region logout
+userRoutes.post("/users/logout", async (req, res) => {
+    try {
+        // Clear JWT cookie
+        res.clearCookie("jwt", {
+            httpOnly: true,
+            sameSite: "strict",
+            path: "/"
+        });
+
+        ChalkActions({
+            message: "[LOGOUT SUCCESS] User logged out"
+        });
+
+        return res.status(200).json({message: "Logout successful"});
+
+    } catch (e) {
+        console.log(`[LOGOUT ERROR] Server error: ${e.message}`);
+        return res.status(500).json({message: "Internal server error"});
+    }
+});
+// endregion
+
+userRoutes.get("/csrf-token", (req, res) => { res.status(200).json({ message: "CSRF token set" }); });
+
+
+export default userRoutes;
+
+
+//====================================================================================================
+// src/api/servers/csrfService.js
+//====================================================================================================
+
+// src/api/servers/csrfService.js
+import axios from "axios";
+import {ChalkActions} from "../../chalkActions/chalkActions.js";
+
+const sendReqForSetCookie = async () => {
+    try {
+        const response = await axios.get("http://localhost:3000/csrf-token", {
+            withCredentials: true, // very important for cookies
+        });
+
+        ChalkActions({message:`"CSRF cookie set successfully:", ${response.headers["x-csrf-token-generated"]}`})
+
+
+
+    } catch (error) {
+        console.error("Failed to get CSRF cookie:", error.message);
+    }
+};
+
+export default sendReqForSetCookie;
+
+
+
+//====================================================================================================
+// src/chalkActions/chalkActions.js
+//====================================================================================================
+
+import chalk from 'chalk';
+
+// import fs from 'fs';
+
+function getCallerFile() {
+    try {
+        const err = new Error();
+        const stack = err.stack;
+
+        if (!stack) {
+            return '[unknown] ';
+        }
+
+        // Convert stack to array of lines
+        const stackLines = stack.split('\n');
+
+        // Debug: to see stack trace
+        // console.log('Stack Lines:', stackLines);
+
+        // Find first line that is not ChalkActions
+        for (let i = 0; i < stackLines.length; i++) {
+            const line = stackLines[i];
+
+            // If line contains getCallerFile or ChalkActions, skip it
+            if (line.includes('getCallerFile') || line.includes('ChalkActions')) {
+                continue;
+            }
+
+            // Now this line is the real caller
+            // Different stack trace formats:
+            // Chrome/Node: "    at Object.<anonymous> (file:///path/to/file.js:10:5)"
+            // Firefox: "    @file:///path/to/file.js:10:5"
+            // Webpack: "    at Object../src/file.js (http://localhost:3000/main.js:123:45)"
+
+            // Pattern 1: (file path)
+            let match = line.match(/\(([^)]+)\)/);
+            if (match) {
+                const fullPath = match[1];
+                return extractFileName(fullPath);
+            }
+
+            // Pattern 2: @ file path (Firefox)
+            match = line.match(/@(.+)/);
+            if (match) {
+                const fullPath = match[1];
+                return extractFileName(fullPath);
+            }
+
+            // Pattern 3: at file path (without parentheses)
+            match = line.match(/at\s+(.+)/);
+            if (match) {
+                const fullPath = match[1].trim();
+                return extractFileName(fullPath);
+            }
+        }
+
+        return '[unknown] ';
+    } catch (error) {
+        console.error('Error in getCallerFile:', error);
+        return '[unknown] ';
+    }
+}
+
+function extractFileName(fullPath) {
+    try {
+        // Remove line and column numbers (like :10:5)
+        let cleanPath = fullPath.split(':').slice(0, -2).join(':');
+
+        // If still has :, probably protocol (http:// or file://)
+        if (cleanPath.includes('://')) {
+            cleanPath = fullPath.replace(/:\d+:\d+$/, '');
+        } else if (!cleanPath) {
+            // If empty, means only had one :, so remove only last number
+            cleanPath = fullPath.split(':').slice(0, -1).join(':');
+        }
+
+        // Remove query string and hash
+        cleanPath = cleanPath.split('?')[0].split('#')[0];
+
+        // Get file name
+        // For Windows and Linux
+        const fileName = cleanPath.split('/').pop().split('\\').pop();
+
+        // If file name is valid
+        if (fileName && fileName.length > 0 && fileName !== 'anonymous') {
+            return `[${fileName}] `;
+        }
+
+        return '[unknown] ';
+    } catch (error) {
+        return '[unknown] ';
+    }
+}
+
+export const ChalkActions = ({level = 'info', textColor = 'white', bgColor = 'bgBlue', message}) => {
+    const colorMap = {
+        info: {text: 'white', bg: 'bgBlue'},
+        warn: {text: 'yellow', bg: 'bgYellow'},
+        error: {text: 'red', bg: 'bgRed'},
+    };
+
+    const effectiveTextColor = chalk[textColor] || chalk[colorMap[level].text];
+    const effectiveBgColor = chalk[bgColor] || chalk[colorMap[level].bg];
+
+    // Add file address to start of message
+    const filePrefix = getCallerFile();
+    const fullMessage = filePrefix + (typeof message === 'string' ? message : JSON.stringify(message));
+
+    // Hide passwords for security
+    const safeMessage = typeof fullMessage === 'string'
+        ? fullMessage.replace(/password\s*[=:]\s*["']?[^"',}\s]+["']?/gi, 'password = [HIDDEN]')
+        : fullMessage;
+
+    const icon = level === 'info' ? '✅' : level === 'warn' ? '⚠️' : '❌';
+    const logMessage = `${icon} [${level.toUpperCase()}] [${new Date().toISOString()}] ${safeMessage}`;
+
+    console.log(effectiveBgColor(effectiveTextColor.bold(logMessage)));
+
+    // fs.appendFileSync('logs.txt', logMessage + '\n');
+};
+
+// مثال استفاده:
+// ChalkActions({ message: 'Server started', level: 'info', textColor: 'green', bgColor: 'bgGreen' });
+// ChalkActions({ message: 'Warning message', level: 'warn' });
+// ChalkActions({ message: 'Error occurred', level: 'error' });
+// ChalkActions({ message: { username: 'ali', password: '123456' } }); // password will be hidden
+
+
+//====================================================================================================
+// src/pages/auth/LoginPage.jsx
+//====================================================================================================
+
+import {useState} from "react";
+import {useDispatch} from "react-redux";
+import {loginUser} from "../../redux/features/userReducer.js";
+
+
+function LoginPage() {
+    const [userData, setUserData] = useState({username: "", password: ""})
+
+    const dispatch = useDispatch();
+
+    const handleRegisterUser = async () => {
+
+        await dispatch(loginUser({username:userData.username , password:userData.password}))
+
+    }
+
+    return (
+        <div className="w-full h-screen bg-violet-200 flex flex-col justify-center items-center space-y-2">
+
+            <input className="input" placeholder="name" value={userData.username}
+                   onChange={(e) => setUserData({...userData, username: e.target.value})}/>
+
+
+            <input className="input" placeholder="password" type="password"
+                   value={userData.password}
+                   onChange={(e) => setUserData({...userData, password: e.target.value})}/>
+
+
+            <button className="button" onClick={handleRegisterUser}>
+                login
+            </button>
+
+        </div>
+    )
+}
+
+export default LoginPage
+
+
+
+//====================================================================================================
+// src/pages/auth/RegisterPage.jsx
+//====================================================================================================
+
+import React, {useState} from 'react'
+import {useDispatch} from "react-redux";
+import {registerUser} from "../../redux/features/userReducer.js";
+
+function RegisterPage() {
+
+    const [userData, setUserData] = useState({username: "", password: ""})
+    const dispatch = useDispatch();
+
+    const handleRegisterUser = async () => {
+
+        await dispatch(registerUser({username: userData.username, password: userData.password}));
+
+
+    }
+
+    return (
+        <div className="w-full h-screen bg-violet-200 flex flex-col justify-center items-center space-y-2">
+
+            <input className="input" placeholder="name" value={userData.username}
+                   onChange={(e) => setUserData({...userData, username: e.target.value})}/>
+
+
+            <input className="input" placeholder="password" type="password"
+                   value={userData.password}
+                   onChange={(e) => setUserData({...userData, password: e.target.value})}/>
+
+
+            <button className="button" onClick={handleRegisterUser}>
+                register
+            </button>
+
+        </div>
+    )
+}
+
+export default RegisterPage
+
+
+
+//====================================================================================================
+// src/redux/store.js
+//====================================================================================================
+
+import {configureStore} from "@reduxjs/toolkit";
+import UserReducer from "./features/userReducer.js";
+
+
+const store = configureStore(
+    {
+        reducer:{
+            userReducer:UserReducer,
+        }
+    }
+);
+
+
+export default store;
+
+
+//====================================================================================================
+// src/redux/features/userReducer.js
+//====================================================================================================
+
+import {createAsyncThunk, createSlice} from "@reduxjs/toolkit";
+import axios from "axios";
+import {getCookie} from "../../utils/getCookie.js";
+
+// region Async Thunk : register
+export const registerUser = createAsyncThunk(
+    "register",
+    async ({username, password}, thunkAPI) => {
+
+        try {
+
+            const csrfToken = getCookie("XSRF-TOKEN");
+
+
+            const response = await axios.post("http://localhost:3000/users/register", {username, password}, {
+                withCredentials: true,
+                headers: {
+                    "Content-Type": "application/json",
+                    "x-xsrf-token": csrfToken
+                }
+            });
+
+            return {username: response.data.username}; // just data that needed
+
+        } catch (e) {
+
+            console.log("Error in registerUser thunk:", e.message);
+            return thunkAPI.rejectWithValue(e.message || "error in register progress");
+        }
+    }
+);
+// endregion
+
+
+// region Async Thunk : login
+export const loginUser = createAsyncThunk(
+    "loginUser",
+
+    async ({username, password}, thunkAPI) => {
+
+        try {
+            function getCookie(name) {
+                const value = `; ${document.cookie}`;
+                const parts = value.split(`; ${name}=`);
+                if (parts.length === 2) return parts.pop().split(';').shift();
+            }
+
+            const csrfToken = getCookie("XSRF-TOKEN");
+
+            const response = await axios.post("http://localhost:3000/users/login", {username, password}, {
+                withCredentials: true,
+                headers: {
+                    "Content-Type": "application/json",
+                    "x-xsrf-token": csrfToken
+                }
+            });
+
+            console.log(`[FRONTEND LOGIN SUCCESS] Response: ${response.data.message}`);
+
+            return {username: response.data.username};
+        } catch (e) {
+
+
+            return thunkAPI.rejectWithValue(e.message || "error in login")
+
+        }
+
+    }
+)
+// endregion
+
+// region Async Thunk : logout
+export const logoutUser = createAsyncThunk(
+    "logoutUser",
+    async (_, thunkAPI) => {
+        try {
+            const csrfToken = getCookie("XSRF-TOKEN");
+
+            const response = await axios.post("http://localhost:3000/users/logout",
+                {},
+                {
+                    withCredentials: true,
+                    headers: {
+                        "Content-Type": "application/json",
+                        "x-xsrf-token": csrfToken
+                    }
+                }
+            );
+
+            console.log(`[FRONTEND LOGOUT SUCCESS]`);
+            return response.data;
+        } catch (e) {
+            // Even if logout fails on server, clear local state
+            return thunkAPI.fulfillWithValue({});
+        }
+    }
+)
+// endregion
+
+
+const initialState = {
+    isLoading: false,
+    isError: false,
+    data: [],
+    user: null,
+    isAuthenticated: false,
+}
+
+const UserReducer = createSlice(
+    {
+        name: "UserRegister",
+        initialState,
+        reducers: {
+            // Synchronous logout (if you don't need server call)
+            clearUser: (state) => {
+                state.user = null;
+                state.isAuthenticated = false;
+                state.error = null;
+            }
+        },
+        extraReducers: builder => {
+            builder
+                // region register
+                .addCase(registerUser.pending, (user) => {
+                    user.isLoading = true;
+                    user.isError = false;
+                })
+
+                .addCase(registerUser.fulfilled, (user, action) => {
+                    user.isLoading = false;
+                    user.isError = false;
+                    user.data.push(action.payload);
+                })
+
+                .addCase(registerUser.rejected, (user) => {
+                    user.isLoading = false;
+                    user.isError = true;
+                })
+                // endregion
+
+                // region login
+                .addCase(loginUser.pending, user => {
+                    user.isLoading = true;
+                    user.isError = false;
+                })
+                .addCase(loginUser.fulfilled, (user, action) => {
+                    user.isLoading = false;
+                    user.isError = false;
+                    console.log(`[REDUX] Login fulfilled for user: ${action.payload.username}`);
+                    user.user = action.payload;
+                    user.isAuthenticated = true;
+                })
+                .addCase(loginUser.rejected, user => {
+                    user.isLoading = false;
+                    user.isError = true;
+                })
+            // endregion
+
+                // region logout
+                .addCase(logoutUser.pending, (state) => {
+                    state.isLoading = true;
+                })
+                .addCase(logoutUser.fulfilled, (state) => {
+                    state.isLoading = false;
+                    state.isError = false;
+                    state.user = null;
+                    state.isAuthenticated = false;
+                    state.error = null;
+                })
+                .addCase(logoutUser.rejected, (state) => {
+                    // Even if logout fails, clear the state
+                    state.isLoading = false;
+                    state.user = null;
+                    state.isAuthenticated = false;
+                })
+            // endregion
+        }
+    }
+);
+
+export const {clearUser} = UserReducer.actions;
+export default UserReducer.reducer;
+
+
+
+
+
+//====================================================================================================
+// src/utils/getCookie.js
+//====================================================================================================
+
+// src/utils/cookieHelper.js
+export function getCookie(name) {
+    const cookieString = document.cookie;
+    if (!cookieString) return null;
+
+    const value = `; ${cookieString}`;
+    const parts = value.split(`; ${name}=`);
+
+    if (parts.length === 2) {
+        return parts.pop().split(';').shift();
+    }
+
+    return null;
+}
+
+
