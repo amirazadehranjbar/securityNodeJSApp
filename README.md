@@ -7,6 +7,8 @@
   <img src="https://github.com/amirazadehranjbar/securityNodeJSApp/blob/main/images/reactlogo.png?raw=true"  width="80px"/>
   <img src="https://github.com/amirazadehranjbar/securityNodeJSApp/blob/main/images/redux.png?raw=true"  width="200px"/>
   <img src="https://github.com/amirazadehranjbar/securityNodeJSApp/blob/main/images/express.png?raw=true"  width="200px"/>
+  <img src="https://github.com/amirazadehranjbar/securityNodeJSApp/blob/main/images/tailwind.png?raw=true"  width="200px"/>
+  
   
   
   
@@ -269,6 +271,7 @@ Contributions are welcome! Since this is an ongoing project, feel free to:
 **Built with ❤️ using modern web technologies**
 
 *⭐ Star this repo if you find it helpful! ⭐*
+
 
 
 
